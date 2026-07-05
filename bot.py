@@ -10,15 +10,22 @@ TOKEN = "8682369232:AAH3qcTjO0QYdfGvunCNT1zaTkhyGTnm0Co"
 WEBHOOK_URL = "https://kitten-gift-bot.onrender.com/webhook"
 MINIAPP_URL = "https://t.me/kittenGift_Bot/adminpanel?startapp=adminpanel"
 
+# Администраторы (могут делать рассылку)
 ADMINS = ["5870949629"]
-USERS = ["5870949629"]  # Добавляйте ID пользователей
+
+# Пользователи для рассылки (ДОБАВЛЯЙТЕ СЮДА)
+USERS = [
+    "5870949629",  # Вы
+    # "123456789",  # Другой пользователь
+    # "987654321",  # Ещё один
+]
 
 # ==================== ИНИЦИАЛИЗАЦИЯ ====================
 
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
 
-# ==================== ОБРАБОТЧИКИ КОМАНД ====================
+# ==================== КОМАНДА /start ====================
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -36,12 +43,20 @@ def start(message):
     
     bot.reply_to(message, welcome, reply_markup=keyboard)
 
-# ==================== ОБРАБОТЧИК ДАННЫХ ИЗ MINI APP ====================
+# ==================== ОБРАБОТЧИК ВСЕХ СООБЩЕНИЙ ====================
 
-@bot.message_handler(func=lambda message: message.text and message.text.startswith('{"action"'))
-def handle_webapp_data(message):
+@bot.message_handler(func=lambda message: True)
+def handle_all_messages(message):
+    """Обрабатывает все сообщения, включая данные из Mini App"""
     user_id = str(message.from_user.id)
     text = message.text
+    
+    # Проверяем, что это данные из Mini App (JSON)
+    if not text or not text.startswith('{"action"'):
+        # Если не JSON — игнорируем
+        return
+    
+    print(f"📩 Получены данные от {user_id}: {text[:100]}...")
     
     try:
         data = json.loads(text)
@@ -93,7 +108,13 @@ def handle_webapp_data(message):
                 f"👥 *Список пользователей (первые 10)*\n\n{users_list}{more}",
                 parse_mode="Markdown"
             )
+        
+        else:
+            bot.reply_to(message, f"❌ Неизвестное действие: {action}")
     
+    except json.JSONDecodeError as e:
+        print(f"Ошибка парсинга JSON: {e}")
+        bot.reply_to(message, "❌ Ошибка обработки данных.")
     except Exception as e:
         print(f"Ошибка: {e}")
         bot.reply_to(message, f"❌ Произошла ошибка: {str(e)}")
