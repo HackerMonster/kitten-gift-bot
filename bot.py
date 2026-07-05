@@ -13,7 +13,7 @@ from aiohttp import web
 TOKEN = "8682369232:AAH3qcTjO0QYdfGvunCNT1zaTkhyGTnm0Co"
 
 # ССЫЛКА НА ВАШ БОТ НА RENDER (ЗАМЕНИТЕ ПОСЛЕ ДЕПЛОЯ!)
-WEBHOOK_URL = "https://ВАШ-БОТ.onrender.com/webhook"
+WEBHOOK_URL = "https://kitten-gift-bot.onrender.com/webhook"
 
 # ССЫЛКА НА MINI APP (ОТ BOTFATHER) С ПАРАМЕТРОМ
 MINIAPP_URL = "https://t.me/kittenGift_Bot/adminpanel?startapp=adminpanel"
