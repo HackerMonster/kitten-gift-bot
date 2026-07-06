@@ -3,6 +3,7 @@ import json
 import os
 import time
 from flask import Flask, request, jsonify
+from flask_cors import CORS  # 👈 ДОБАВИТЬ!
 
 # ==================== НАСТРОЙКИ ====================
 
@@ -10,19 +11,14 @@ TOKEN = "8682369232:AAH3qcTjO0QYdfGvunCNT1zaTkhyGTnm0Co"
 WEBHOOK_URL = "https://kitten-gift-bot.onrender.com/webhook"
 MINIAPP_URL = "https://t.me/kittenGift_Bot/adminpanel?startapp=adminpanel"
 
-# Администраторы (могут делать рассылку)
 ADMINS = ["5870949629"]
-
-# Пользователи для рассылки
-USERS = [
-    "5870949629",
-    # "123456789",
-]
+USERS = ["5870949629"]
 
 # ==================== ИНИЦИАЛИЗАЦИЯ ====================
 
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
+CORS(app)  # 👈 ДОБАВИТЬ! Разрешает запросы с любых доменов
 
 # ==================== КОМАНДА /start ====================
 
@@ -45,7 +41,6 @@ def start(message):
 # ==================== ФУНКЦИЯ РАССЫЛКИ ====================
 
 def send_broadcast(text, admin_id=None):
-    """Отправляет рассылку всем пользователям"""
     success = 0
     for uid in USERS:
         try:
@@ -56,11 +51,20 @@ def send_broadcast(text, admin_id=None):
             print(f"Ошибка отправки {uid}: {e}")
     return success
 
-# ==================== API ДЛЯ HTML (НОВЫЙ ЭНДПОИНТ!) ====================
+# ==================== API ДЛЯ HTML ====================
 
-@app.route('/api/send', methods=['POST'])
+@app.route('/api/send', methods=['POST', 'OPTIONS'])
 def api_send():
     """Принимает POST-запрос из HTML и делает рассылку"""
+    
+    # Обработка preflight запроса (CORS)
+    if request.method == 'OPTIONS':
+        response = jsonify({"status": "ok"})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'POST')
+        return response
+    
     try:
         data = request.json
         text = data.get('text', '').strip()
@@ -68,43 +72,52 @@ def api_send():
         
         # Проверяем права
         if admin_id not in ADMINS:
-            return jsonify({
+            response = jsonify({
                 "status": "error",
                 "message": "У вас нет прав для рассылки."
-            }), 403
+            })
+            response.headers.add('Access-Control-Allow-Origin', '*')
+            return response, 403
         
         if not text:
-            return jsonify({
+            response = jsonify({
                 "status": "error",
                 "message": "Текст рассылки не может быть пустым."
-            }), 400
+            })
+            response.headers.add('Access-Control-Allow-Origin', '*')
+            return response, 400
         
         if len(text) < 5:
-            return jsonify({
+            response = jsonify({
                 "status": "error",
                 "message": "Текст слишком короткий (минимум 5 символов)."
-            }), 400
+            })
+            response.headers.add('Access-Control-Allow-Origin', '*')
+            return response, 400
         
         # Делаем рассылку
         success = send_broadcast(text, admin_id)
         
-        return jsonify({
+        response = jsonify({
             "status": "success",
             "message": f"Рассылка завершена! Отправлено: {success} из {len(USERS)} пользователей."
-        }), 200
+        })
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response, 200
         
     except Exception as e:
         print(f"Ошибка API: {e}")
-        return jsonify({
+        response = jsonify({
             "status": "error",
             "message": f"Ошибка: {str(e)}"
-        }), 500
+        })
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response, 500
 
 # ==================== ОБРАБОТЧИК ДАННЫХ ИЗ MINI APP ====================
 
 @bot.message_handler(func=lambda message: message.text and message.text.startswith('{"action"'))
 def handle_webapp_data(message):
-    """Обрабатывает данные из Mini App (через tg.sendData)"""
     user_id = str(message.from_user.id)
     text = message.text
     
